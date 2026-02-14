@@ -1,0 +1,212 @@
+# ds_mf/ — Data Standardization and Morphological Features
+
+This stage converts cleaned footprints into modeling-ready datasets by:
+
+1. Conflating GEDI proxy heights
+2. Computing planimetric morphology
+3. Extracting raster features
+4. Enforcing a universal schema
+
+All scripts assume fixed directory structure under `/home/gmiddle/rs_paper/`.
+
+Execution order matters.
+
+---
+
+## 1. GEDI Conflation
+
+Source: 
+
+### Purpose
+
+Attaches GEDI `rh95` proxy heights to building footprints.
+
+### Inputs
+
+* Buildings: `/home/gmiddle/rs_paper/data_prep/`
+* GEDI zips: `/home/gmiddle/rs_paper/gedi/`
+
+### Rules
+
+**Rule A:**
+Direct spatial intersection → assign max `rh95` and count (`gedi_n`)
+
+**Rule B:**
+Nearest centroid propagation within 25 units
+
+### Output
+
+For each city:
+
+```
+<city>_gedi_conflated.gpkg
+```
+
+Written in the same directory as input building file.
+
+### Execution
+
+```
+python ged_conf.py
+```
+
+### Notes
+
+* Anchor CRS taken from building file
+* GEDI reprojected to match anchor CRS
+* Logs written to `conflation_log.txt`
+
+---
+
+## 2. Morphological Feature Calculation
+
+Source: 
+
+### Purpose
+
+Computes planimetric morphology features and neighborhood statistics.
+
+### Inputs
+
+```
+/home/gmiddle/rs_paper/clean_fp/*.gpkg
+```
+
+### Features
+
+**Single-building metrics**
+
+* Area
+* Perimeter
+* Convex hull area
+* Compactness
+* IPQ
+* Fractality
+* Cooke JC index
+* Rectangularity
+* Aspect ratio
+* Eccentricity
+* Vertex count
+* Lat/long extent
+
+**Neighborhood metrics**
+For radii:
+
+* 100m
+* 250m
+* 500m
+* 1000m
+
+Per radius:
+
+* Neighbor count
+* Mean distance
+* Std distance
+* Min / Max
+* Coefficient of variation
+
+Chunked KD-tree used for RAM safety.
+
+### Output
+
+```
+/home/gmiddle/rs_paper/morphologically_processed/<city>.gpkg
+```
+
+### Execution
+
+```
+python morphology_calc.py
+```
+
+---
+
+## 3. Remote Sensing Feature Extraction
+
+Source: 
+
+### Purpose
+
+Samples raster features at footprint centroids and merges with morphology.
+
+### Inputs
+
+* Morphology outputs
+
+  ```
+  /home/gmiddle/rs_paper/morphologically_processed/
+  ```
+* Raster zip stacks
+
+  ```
+  /home/gmiddle/rs_paper/rs_data/
+  ```
+
+### Behavior
+
+* Unzips imagery
+* Reprojects centroids to raster CRS dynamically
+* Samples all bands
+* Creates unique band column names
+* Concatenates all raster chunks
+* Joins to building dataset
+
+### Output
+
+```
+/home/gmiddle/rs_paper/data/<city>_data.gpkg
+```
+
+### Execution
+
+```
+python rs_extractor.py
+```
+
+---
+
+## 4. Final Data Preparation
+
+Source: 
+
+### Purpose
+
+Enforces universal schema across cities and removes incomplete rows.
+
+### Process
+
+1. Scan all `<city>_data.gpkg` files
+2. Compute intersection of all column names
+3. Subset each dataset to common columns
+4. Drop rows containing any NULL values
+
+### Input
+
+```
+/home/gmiddle/rs_paper/data/
+```
+
+### Output
+
+```
+/home/gmiddle/rs_paper/data_prep/
+```
+
+### Execution
+
+```
+python data_prep.py
+```
+
+---
+
+# Full Pipeline Order
+
+1. `ged_conf.py`
+2. `morphology_calc.py`
+3. `rs_extractor.py`
+4. `data_prep.py`
+
+Final outputs in `/data_prep/` are fully standardized, morphology-enhanced, raster-enriched datasets ready for `model_scripts/`.
+
+All outputs use meter-based CRS inherited from the building source.
