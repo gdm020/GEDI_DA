@@ -1,0 +1,211 @@
+# --- Data Settings ---
+input_dir: "/home/gmiddle/rs_paper/data_prep/"
+output_dir: "/home/gmiddle/rs_paper/models/"
+target_column: "height"
+
+# Columns to explicitly ignore (ID columns, etc.)
+ignore_columns:
+  - "id"
+  - "fid"
+  - "building_id"
+  - "osm_id"
+  - "globalid"
+  - "ancillary_data_stack_longitude"
+  - "ancillary_data_stack_latitude"
+
+# --- Hyperparameter Search Process ---
+search:
+  enabled: true
+  n_iter: 50          # INCREASED: We need more iterations to cover this larger space
+  cv_folds: 3         # Cross-validation folds for tuning
+  metric: "rmse"      # Metric to optimize during search
+
+# --- XGBoost Configuration ---
+# Fixed parameters (used in every run)
+fixed_params:
+  objective: "reg:squarederror"
+  tree_method: "hist" # Hist is optimized for CPU speed on large datasets
+  device: "cpu"       # Explicitly set to CPU
+  n_jobs: 40          # Use 50 cores
+  eval_metric: "rmse"
+
+param_grid:
+  learning_rate:     [0.01, 0.02, 0.03, 0.05, 0.08, 0.10, 0.12]
+  max_depth:         [4, 6, 8, 10, 12]
+  n_estimators:      [600, 800, 1000, 1400, 1800, 2200]
+
+  min_child_weight:  [1, 2, 3, 5, 7, 10]
+  gamma:             [0.0, 0.05, 0.10, 0.25, 0.50, 1.0]
+
+  subsample:         [0.6, 0.7, 0.8, 0.9, 1.0]
+  colsample_bytree:  [0.5, 0.6, 0.7, 0.85, 1.0]
+
+  reg_alpha:         [1.0e-8, 0.00000001, 0.0001, 0.001, 0.01, 0.1, 1.0, 5.0, 10.0]
+  reg_lambda:        [1.0e-8, 0.01, 0.1, 1.0, 5.0, 10.0, 20.0]
+
+  # --- Feature Groups ---
+morphological_features:
+  - "area"
+  - "perimeter"
+  - "convex_hull_area"
+  - "convexity"
+  - "width"
+  - "height_bbox"
+  - "compactness"
+  - "IPQ"
+  - "fractality"
+  - "cooke_jc_index"
+  - "rectangularity"
+  - "aspect_ratio"
+  - "diagonal"
+  - "eccentricity"
+  - "vertex_count"
+  - "lat_dif"
+  - "long_dif"
+  # Neighbor / Context Features
+  - "n_100m_count"
+  - "n_100m_dist_mean"
+  - "n_100m_dist_std"
+  - "n_100m_dist_min"
+  - "n_100m_dist_max"
+  - "n_100m_dist_cv"
+  - "n_250m_count"
+  - "n_250m_dist_mean"
+  - "n_250m_dist_std"
+  - "n_250m_dist_min"
+  - "n_250m_dist_max"
+  - "n_250m_dist_cv"
+  - "n_500m_count"
+  - "n_500m_dist_mean"
+  - "n_500m_dist_std"
+  - "n_500m_dist_min"
+  - "n_500m_dist_max"
+  - "n_500m_dist_cv"
+  - "n_1000m_count"
+  - "n_1000m_dist_mean"
+  - "n_1000m_dist_std"
+  - "n_1000m_dist_min"
+  - "n_1000m_dist_max"
+  - "n_1000m_dist_cv"
+
+remote_sensing_features:
+  # Sentinel-2 Indices (50m)
+  - "s2_indices_spatial_50m_ndvi_mean_spatial_50m_mean"
+  - "s2_indices_spatial_50m_evi_mean_spatial_50m_mean"
+  - "s2_indices_spatial_50m_lswi_mean_spatial_50m_mean"
+  - "s2_indices_spatial_50m_mndwi_mean_spatial_50m_mean"
+  - "s2_indices_spatial_50m_ndbi_mean_spatial_50m_mean"
+  - "s2_indices_spatial_50m_csi_mean_spatial_50m_mean"
+  - "s2_indices_spatial_50m_ndvi_mean_spatial_50m_max"
+  - "s2_indices_spatial_50m_evi_mean_spatial_50m_max"
+  - "s2_indices_spatial_50m_lswi_mean_spatial_50m_max"
+  - "s2_indices_spatial_50m_mndwi_mean_spatial_50m_max"
+  - "s2_indices_spatial_50m_ndbi_mean_spatial_50m_max"
+  - "s2_indices_spatial_50m_csi_mean_spatial_50m_max"
+  # Sentinel-2 Indices (100m)
+  - "s2_indices_spatial_100m_ndvi_mean_spatial_100m_mean"
+  - "s2_indices_spatial_100m_evi_mean_spatial_100m_mean"
+  - "s2_indices_spatial_100m_lswi_mean_spatial_100m_mean"
+  - "s2_indices_spatial_100m_mndwi_mean_spatial_100m_mean"
+  - "s2_indices_spatial_100m_ndbi_mean_spatial_100m_mean"
+  - "s2_indices_spatial_100m_csi_mean_spatial_100m_mean"
+  - "s2_indices_spatial_100m_ndvi_mean_spatial_100m_max"
+  - "s2_indices_spatial_100m_evi_mean_spatial_100m_max"
+  - "s2_indices_spatial_100m_lswi_mean_spatial_100m_max"
+  - "s2_indices_spatial_100m_mndwi_mean_spatial_100m_max"
+  - "s2_indices_spatial_100m_ndbi_mean_spatial_100m_max"
+  - "s2_indices_spatial_100m_csi_mean_spatial_100m_max"
+  # Sentinel-2 Indices (150m)
+  - "s2_indices_spatial_150m_ndvi_mean_spatial_150m_mean"
+  - "s2_indices_spatial_150m_evi_mean_spatial_150m_mean"
+  - "s2_indices_spatial_150m_lswi_mean_spatial_150m_mean"
+  - "s2_indices_spatial_150m_mndwi_mean_spatial_150m_mean"
+  - "s2_indices_spatial_150m_ndbi_mean_spatial_150m_mean"
+  - "s2_indices_spatial_150m_csi_mean_spatial_150m_mean"
+  - "s2_indices_spatial_150m_ndvi_mean_spatial_150m_max"
+  - "s2_indices_spatial_150m_evi_mean_spatial_150m_max"
+  - "s2_indices_spatial_150m_lswi_mean_spatial_150m_max"
+  - "s2_indices_spatial_150m_mndwi_mean_spatial_150m_max"
+  - "s2_indices_spatial_150m_ndbi_mean_spatial_150m_max"
+  - "s2_indices_spatial_150m_csi_mean_spatial_150m_max"
+  # Sentinel-2 Indices (200m)
+  - "s2_indices_spatial_200m_ndvi_mean_spatial_200m_mean"
+  - "s2_indices_spatial_200m_evi_mean_spatial_200m_mean"
+  - "s2_indices_spatial_200m_lswi_mean_spatial_200m_mean"
+  - "s2_indices_spatial_200m_mndwi_mean_spatial_200m_mean"
+  - "s2_indices_spatial_200m_ndbi_mean_spatial_200m_mean"
+  - "s2_indices_spatial_200m_csi_mean_spatial_200m_mean"
+  - "s2_indices_spatial_200m_ndvi_mean_spatial_200m_max"
+  - "s2_indices_spatial_200m_evi_mean_spatial_200m_max"
+  - "s2_indices_spatial_200m_lswi_mean_spatial_200m_max"
+  - "s2_indices_spatial_200m_mndwi_mean_spatial_200m_max"
+  - "s2_indices_spatial_200m_ndbi_mean_spatial_200m_max"
+  - "s2_indices_spatial_200m_csi_mean_spatial_200m_max"
+  # Sentinel-2 Temporal Stats
+  - "s2_indices_temporal_stats_ndvi_mean"
+  - "s2_indices_temporal_stats_ndvi_max"
+  - "s2_indices_temporal_stats_ndvi_stddev"
+  - "s2_indices_temporal_stats_evi_mean"
+  - "s2_indices_temporal_stats_evi_max"
+  - "s2_indices_temporal_stats_evi_stddev"
+  - "s2_indices_temporal_stats_lswi_mean"
+  - "s2_indices_temporal_stats_lswi_max"
+  - "s2_indices_temporal_stats_lswi_stddev"
+  - "s2_indices_temporal_stats_mndwi_mean"
+  - "s2_indices_temporal_stats_mndwi_max"
+  - "s2_indices_temporal_stats_mndwi_stddev"
+  - "s2_indices_temporal_stats_ndbi_mean"
+  - "s2_indices_temporal_stats_ndbi_max"
+  - "s2_indices_temporal_stats_ndbi_stddev"
+  - "s2_indices_temporal_stats_csi_mean"
+  - "s2_indices_temporal_stats_csi_max"
+  - "s2_indices_temporal_stats_csi_stddev"
+  # Sentinel-1 Spatial (50m)
+  - "s1_spatial_50m_vv_mean_spatial_50m_mean"
+  - "s1_spatial_50m_vh_mean_spatial_50m_mean"
+  - "s1_spatial_50m_vvh_mean_spatial_50m_mean"
+  - "s1_spatial_50m_vv_mean_spatial_50m_max"
+  - "s1_spatial_50m_vh_mean_spatial_50m_max"
+  - "s1_spatial_50m_vvh_mean_spatial_50m_max"
+  # Sentinel-1 Spatial (100m)
+  - "s1_spatial_100m_vv_mean_spatial_100m_mean"
+  - "s1_spatial_100m_vh_mean_spatial_100m_mean"
+  - "s1_spatial_100m_vvh_mean_spatial_100m_mean"
+  - "s1_spatial_100m_vv_mean_spatial_100m_max"
+  - "s1_spatial_100m_vh_mean_spatial_100m_max"
+  - "s1_spatial_100m_vvh_mean_spatial_100m_max"
+  # Sentinel-1 Spatial (150m)
+  - "s1_spatial_150m_vv_mean_spatial_150m_mean"
+  - "s1_spatial_150m_vh_mean_spatial_150m_mean"
+  - "s1_spatial_150m_vvh_mean_spatial_150m_mean"
+  - "s1_spatial_150m_vv_mean_spatial_150m_max"
+  - "s1_spatial_150m_vh_mean_spatial_150m_max"
+  - "s1_spatial_150m_vvh_mean_spatial_150m_max"
+  # Sentinel-1 Spatial (200m)
+  - "s1_spatial_200m_vv_mean_spatial_200m_mean"
+  - "s1_spatial_200m_vh_mean_spatial_200m_mean"
+  - "s1_spatial_200m_vvh_mean_spatial_200m_mean"
+  - "s1_spatial_200m_vv_mean_spatial_200m_max"
+  - "s1_spatial_200m_vh_mean_spatial_200m_max"
+  - "s1_spatial_200m_vvh_mean_spatial_200m_max"
+  # Sentinel-1 Temporal Stats
+  - "s1_temporal_stats_vv_mean"
+  - "s1_temporal_stats_vh_mean"
+  - "s1_temporal_stats_vvh_mean"
+  - "s1_temporal_stats_vv_max"
+  - "s1_temporal_stats_vh_max"
+  - "s1_temporal_stats_vvh_max"
+  - "s1_temporal_stats_vv_stddev"
+  - "s1_temporal_stats_vh_stddev"
+  - "s1_temporal_stats_vvh_stddev"
+  # Ancillary Data (DEM, Nighttime Lights, etc.)
+  - "ancillary_data_stack_wsf2015"
+  - "ancillary_data_stack_copernicus_dem"
+  - "ancillary_data_stack_srtm_dem"
+  - "ancillary_data_stack_alos_dem"
+  - "ancillary_data_stack_slope"
+  - "ancillary_data_stack_viirs_nighttime"
+  - "ancillary_data_stack_population"
+  - "ancillary_data_stack_diff_cop_srtm"
+  - "ancillary_data_stack_diff_cop_alos"
+  - "ancillary_data_stack_diff_alos_srtm"
