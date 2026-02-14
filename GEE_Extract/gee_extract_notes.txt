@@ -1,0 +1,114 @@
+# GEE_Extract/ — Usage README
+
+Scripts in this folder run **only inside Google Earth Engine (GEE)**.
+They are not executable in the local Docker environment.
+
+Execution requires:
+
+* Earth Engine account access
+* Code Editor or authenticated Python API
+* Google Drive export permissions
+
+---
+
+## 1. GEDI Point Extraction
+
+Source: 
+
+### Purpose
+
+Extracts high-quality GEDI waveform height proxies as vector points.
+
+### Dataset
+
+`LARSE/GEDI/GEDI02_A_002_MONTHLY`
+
+### Filters
+
+* `quality_flag == 1`
+* `sensitivity >= 0.9`
+* Date: 2019–2024
+* Spatial filter: ROI
+
+### Outputs
+
+Exports to Google Drive:
+
+* `rh85`
+* `rh95`
+* `x_3857`
+* `y_3857`
+* Geometry
+
+### Execution
+
+1. Open Earth Engine Code Editor
+2. Paste script
+3. Define `geometry` or draw ROI
+4. Run
+5. Approve Drive export
+
+Result: GeoJSON of high-confidence GEDI proxy points.
+
+---
+
+## 2. Remote Sensing Feature Stack Extraction
+
+Source: 
+
+### Purpose
+
+Builds a complete raster feature stack for modeling.
+
+### Data Sources
+
+* Sentinel-1 SAR (VV, VH, VVH)
+* Sentinel-2 SR + spectral indices
+* SRTM DEM
+* Copernicus DEM
+* ALOS DSM
+* VIIRS Nighttime Lights
+* WorldPop Population
+* WSF 2015
+* GHSL Height / Surface / Volume
+
+### Features Generated
+
+* Temporal mean, max, std
+* Spectral indices: NDVI, EVI, LSWI, mNDWI, NDBI, CSI
+* Neighborhood stats at 50m, 100m, 150m, 200m
+* DEM differences
+* Slope
+
+### Exports
+
+* Sentinel-1 temporal stack
+* Sentinel-2 index stack
+* Spatial neighborhood rasters
+* Ancillary stack
+* GEDI table (CSV)
+* GHSL layers
+
+All exports sent to Google Drive.
+
+### Execution
+
+1. Open Earth Engine Code Editor
+2. Define `roi` or draw geometry
+3. Run script
+4. Approve Drive exports
+
+---
+
+## General Notes
+
+* ROI must be defined before execution; otherwise default test region is used.
+* Export scale:
+
+  * 10m for Sentinel features
+  * 30m for ancillary stacks
+  * 25m native for GEDI sampling
+* Large ROIs may exceed export limits; subdivide if necessary.
+* Drive export quotas apply.
+
+Outputs from these scripts are consumed by the `ds_mf/` raster ingestion and feature engineering pipeline.
