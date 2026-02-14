@@ -1,0 +1,366 @@
+# rbfp/ City Cleaners — Usage README
+
+This folder contains city-specific footprint cleaning scripts.
+Each script ingests raw municipal or national footprint data, normalizes schema, standardizes CRS, derives a consistent `height` field in meters, and writes a clean GeoPackage suitable for downstream morphological feature extraction.
+
+All scripts are standalone; each has hard-coded input/output paths at the top of the file. Modify those paths before execution if directory structure differs.
+
+---
+
+## 1. Austin Cleaner
+
+Source: 
+
+### Purpose
+
+Cleans Austin GeoJSON footprint data and constructs a standardized `height` field in meters.
+
+### Height Logic
+
+Priority order:
+
+1. `max_height`
+2. `elevation - base_elevation` fallback
+
+Units assumed feet; converted to meters using 0.3048 multiplier.
+
+### CRS
+
+Reprojects to: `EPSG:32614`
+
+### Input
+
+```
+/home/gmiddle/rs_paper/bfp/austin.geojson
+```
+
+### Output
+
+```
+/home/gmiddle/rs_paper/clean_fp/austin.gpkg
+```
+
+### Execution
+
+```
+python austin_cleaner.py
+```
+
+### Notes
+
+* Includes multi-stage fallback loader for malformed GeoJSON.
+* Drops non-polygons and null heights.
+* Auto-repairs invalid geometries on write failure.
+
+---
+
+## 2. Buenos Aires Cleaner
+
+Source: 
+
+### Purpose
+
+Extracts shapefile from ZIP, cleans height field, and outputs standardized footprint file.
+
+### Height Logic
+
+Column: `altura`
+
+* Comma decimals normalized
+* Accepts values between 0 and 600 meters
+* Invalid values set to NaN
+
+### CRS
+
+Reprojects to: `EPSG:32721`
+
+### Input
+
+```
+/home/gmiddle/rs_paper/bfp/tejido.zip
+```
+
+### Output
+
+```
+/home/gmiddle/rs_paper/clean_fp/buenos_aires.gpkg
+```
+
+### Execution
+
+```
+python buenos_aires_cleaner.py
+```
+
+### Notes
+
+* Temporary unzip directory auto-deleted after processing.
+* Handles Latin1 encoding.
+* Drops geometry-null rows before saving.
+
+---
+
+## 3. EUBUCCO Cleaner (Berlin, Madrid, Amsterdam, Warsaw)
+
+Source: 
+
+### Purpose
+
+Processes zipped EUBUCCO GeoPackages.
+Automatically:
+
+* Unzips
+* Reads all layers
+* Merges valid polygon layers
+* Reprojects to city-specific CRS
+* Writes final standardized GeoPackage
+
+### Supported Cities
+
+Defined in `CITY_CONFIGS`:
+
+* Berlin → EPSG:32633
+* Madrid → EPSG:32630
+* Amsterdam → EPSG:32631
+* Warsaw → EPSG:32634
+
+### Input
+
+Zip files matching patterns like:
+
+```
+*Berlin.gpkg.zip
+```
+
+### Output
+
+```
+berlin.gpkg
+madrid.gpkg
+amsterdam.gpkg
+warsaw.gpkg
+```
+
+Written inside `/home/gmiddle/rs_paper/bfp/`
+
+### Execution
+
+```
+python eubucco_cleaner.py
+```
+
+### Notes
+
+* Automatically merges multi-layer packages.
+* Safe-write mechanism prevents corrupted outputs.
+* Handles CRS inconsistencies across layers.
+
+---
+
+## 4. Sendai Cleaner
+
+Source: 
+
+### Purpose
+
+Extracts building footprints from a GeoPackage and standardizes height schema.
+
+### Height Logic
+
+Column: `measured_height` → renamed to `height`
+Converted to numeric.
+
+### CRS
+
+Reprojects to: `EPSG:32654` (UTM 54N)
+
+### Input
+
+```
+/home/gmiddle/rs_paper/bfp/sendai.gpkg
+```
+
+### Output
+
+```
+/home/gmiddle/rs_paper/bfp/sendai_footprints.gpkg
+```
+
+### Execution
+
+```
+python sendai_cleaner.py
+```
+
+### Notes
+
+* Attempts to read specific layer `main.building_lod0`; falls back if unavailable.
+* Repairs invalid geometries once if write fails.
+
+---
+
+## 5. Auckland Cleaner
+
+Source: 
+
+### Purpose
+
+Derives building height from DSM and DEM Lidar tiles.
+
+### Workflow
+
+1. Unzip building outlines
+2. Unzip Lidar DSM + DEM
+3. Sample raster tiles at building centroids
+4. Compute height = DSM − DEM
+
+### CRS
+
+Reprojects to: `EPSG:2193` (NZTM2000)
+
+### Input
+
+Two ZIP files:
+
+```
+lds-nz-building-outlines-GTiff-SHP.zip
+lds-new-zealand-2layers-GTiff-SHP.zip
+```
+
+### Output
+
+```
+auckland_footprints.gpkg
+```
+
+### Execution
+
+```
+python auckland_cleaner.py
+```
+
+### Notes
+
+* Builds spatial index for tile sampling.
+* Filters unreasonable Lidar values.
+* Retains DSM and DEM columns for QA.
+
+---
+
+## 6. San Francisco Cleaner
+
+Source: 
+
+### Purpose
+
+Cleans malformed GeoJSON and standardizes height.
+
+### Height Logic
+
+Column: `hgt_maxcm`
+Converted from centimeters to meters.
+
+### CRS
+
+Reprojects to: `EPSG:32610`
+
+### Input
+
+```
+/home/gmiddle/rs_paper/bfp/san_fransisco.geojson
+```
+
+### Output
+
+```
+san_francisco_footprints.gpkg
+```
+
+### Execution
+
+```
+python sf_cleaner.py
+```
+
+### Notes
+
+* Multi-tier ingest fallback:
+
+  * Standard Fiona read
+  * Full JSON parse
+  * Feature scraper
+* Repairs invalid polygons if needed.
+
+---
+
+## 7. Cape Town Cleaner
+
+Source: 
+
+### Purpose
+
+Cleans corrupted GeoJSON and standardizes height.
+
+### Height Logic
+
+Column: `BLD_HGT` → numeric → `height`
+
+### CRS
+
+Reprojects to: `EPSG:32734` (UTM 34S)
+
+### Input
+
+```
+/home/gmiddle/rs_paper/bfp/cape_town.geojson
+```
+
+### Output
+
+```
+cape_town_footprints.gpkg
+```
+
+### Execution
+
+```
+python cape_town_cleaner.py
+```
+
+### Notes
+
+* Includes “scraper mode” for severely corrupted GeoJSON.
+* Forces Latin1 decode if necessary.
+* Repairs invalid polygons on failure.
+
+---
+
+# General Requirements
+
+Dependencies:
+
+* geopandas
+* pandas
+* numpy
+* fiona
+* rasterio (Auckland only)
+* shapely
+
+Install example:
+
+```
+pip install geopandas rasterio shapely fiona
+```
+
+---
+
+# Output Schema Standard
+
+All cleaners produce a GeoPackage containing:
+
+* `geometry` (Polygon or MultiPolygon)
+* `height` (meters; float)
+
+All files are projected into meter-based UTM CRS appropriate for each city.
+
+These outputs are consumed directly by `ds_mf/` feature engineering scripts.
